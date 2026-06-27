@@ -111,6 +111,18 @@ export const SavingsSection: React.FC<SavingsSectionProps> = ({
     }
   };
 
+  const currentAvailableToAllocate = moneyAvailableBeforeSavings - monthlyAllocatedToSavings;
+
+  const accountOptions = [
+    "Select Account",
+    ...savingsAccounts.map((acc) => acc.name),
+  ];
+
+  const updateAccountOptions = [
+    "Select Account to Update",
+    ...savingsAccounts.map((acc) => acc.name),
+  ];
+
   const getProgressPercentage = useCallback(
     (balance: number): number => {
       const effectiveMax = Math.max(
