@@ -1,134 +1,81 @@
-import { useMemo } from "react";
-import { useFirebase } from "./hooks/useFirebase";
-import { useBudgetData } from "./hooks/useBudgetData";
-import { LoadingSpinner } from "./components/ui/LoadingSpinner";
-import { ErrorAlert } from "./components/ui/ErrorAlert";
-import { SummaryCards } from "./components/SummaryCards";
-import { IncomeSection } from "./components/IncomeSection";
-import { ExpenseSection } from "./components/ExpenseSection";
-import { SavingsSection } from "./components/SavingsSection";
+import { useState } from 'react';
+import { useAppState } from './store';
+import { Overview } from './pages/Overview';
+import { Savings } from './pages/Savings';
+import { Received } from './pages/Received';
+import { Expenses } from './pages/Expenses';
+import { Assets } from './pages/Assets';
+import { Settings } from './pages/Settings';
+import type { Page } from './types';
+import {
+  LayoutDashboard,
+  PiggyBank,
+  ArrowDownLeft,
+  CreditCard,
+  Gem,
+  Settings as SettingsIcon,
+} from 'lucide-react';
 
-function App() {
-  const {
-    user,
-    loading: firebaseLoading,
-    error: firebaseError,
-  } = useFirebase();
-  const {
-    baseIncome,
-    additionalIncomes,
-    expenses,
-    savingsAccounts,
-    monthlyAllocatedToSavings,
-    setBaseIncome,
-    setAdditionalIncomes,
-    setExpenses,
-    setSavingsAccounts,
-    setMonthlyAllocatedToSavings,
-    loading: budgetLoading,
-    error: budgetError,
-  } = useBudgetData();
+const NAV: { id: Page; label: string; Icon: React.ElementType }[] = [
+  { id: 'overview', label: 'Overview', Icon: LayoutDashboard },
+  { id: 'savings',  label: 'Savings',  Icon: PiggyBank },
+  { id: 'received', label: 'Received', Icon: ArrowDownLeft },
+  { id: 'expenses', label: 'Expenses', Icon: CreditCard },
+  { id: 'assets',   label: 'Assets',   Icon: Gem },
+  { id: 'settings', label: 'Settings', Icon: SettingsIcon },
+];
 
-  const loading = firebaseLoading || budgetLoading;
-  const error = firebaseError || budgetError;
+export default function App() {
+  const { state, update } = useAppState();
+  const [page, setPage] = useState<Page>('overview');
 
-  const calculations = useMemo(() => {
-    const totalIncome =
-      baseIncome +
-      additionalIncomes.reduce((acc, income) => acc + income.amount, 0);
-    const totalExpenses = expenses.reduce(
-      (acc, expense) => acc + expense.amount,
-      0,
-    );
-    const moneyAvailableBeforeSavings = totalIncome - totalExpenses;
-    const finalNetBalance =
-      moneyAvailableBeforeSavings - monthlyAllocatedToSavings;
-    const totalSavingsBalance = savingsAccounts.reduce(
-      (acc, account) => acc + account.balance,
-      0,
-    );
-
-    return {
-      totalIncome,
-      totalExpenses,
-      moneyAvailableBeforeSavings,
-      finalNetBalance,
-      totalSavingsBalance,
-    };
-  }, [
-    baseIncome,
-    additionalIncomes,
-    expenses,
-    savingsAccounts,
-    monthlyAllocatedToSavings,
-  ]);
+  const props = { state, update };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4 sm:p-6 font-inter antialiased">
-      {/* Tailwind CSS CDN and Font Link - move to index.html for production */}
-      <script src="https://cdn.tailwindcss.com"></script>
-      <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
-        rel="stylesheet"
-      />
+    <div className="app-shell">
+      {/* Sidebar (desktop) */}
+      <aside className="sidebar">
+        <div className="sidebar-brand">
+          <div className="sidebar-logo">✨</div>
+          <span className="brand-name">girl math</span>
+        </div>
+        {NAV.map(({ id, label, Icon }) => (
+          <button
+            key={id}
+            className={`nav-item${page === id ? ' active' : ''}`}
+            onClick={() => setPage(id)}
+          >
+            <Icon size={17} />
+            {label}
+          </button>
+        ))}
+      </aside>
 
-      <style>{`
-                body {
-                    font-family: 'Inter', sans-serif;
-                }
-            `}</style>
+      {/* Main content */}
+      <main className="main-content">
+        {page === 'overview' && <Overview {...props} />}
+        {page === 'savings'  && <Savings  {...props} />}
+        {page === 'received' && <Received {...props} />}
+        {page === 'expenses' && <Expenses {...props} />}
+        {page === 'assets'   && <Assets   {...props} />}
+        {page === 'settings' && <Settings {...props} />}
+      </main>
 
-      <div className="max-w-4xl mx-auto">
-        <h1 className="text-4xl sm:text-5xl font-extrabold text-center text-gray-900 mb-10 leading-tight tracking-tight">
-          Personal Budget <span className="text-blue-600">Tracker</span>
-        </h1>
-
-        {loading && <LoadingSpinner message="Loading your budget data..." />}
-
-        {error && <ErrorAlert error={error} />}
-
-        {/* Display User ID for debugging/multi-user context */}
-        {user && (
-          <div className="text-center text-sm text-gray-600 mb-4">
-            Your User ID:{" "}
-            <span className="font-mono bg-gray-200 px-2 py-1 rounded-md">
-              {user.uid}
-            </span>
-          </div>
-        )}
-
-        {!loading && (
-          <>
-            <SummaryCards
-              totalIncome={calculations.totalIncome}
-              totalExpenses={calculations.totalExpenses}
-              remainingBalance={calculations.finalNetBalance}
-            />
-
-            <IncomeSection
-              baseIncome={baseIncome}
-              setBaseIncome={setBaseIncome}
-              additionalIncomes={additionalIncomes}
-              setAdditionalIncomes={setAdditionalIncomes}
-            />
-
-            <ExpenseSection expenses={expenses} setExpenses={setExpenses} />
-
-            <SavingsSection
-              moneyAvailableBeforeSavings={
-                calculations.moneyAvailableBeforeSavings
-              }
-              savingsAccounts={savingsAccounts}
-              setSavingsAccounts={setSavingsAccounts}
-              monthlyAllocatedToSavings={monthlyAllocatedToSavings}
-              setMonthlyAllocatedToSavings={setMonthlyAllocatedToSavings}
-              totalSavingsAccountBalance={calculations.totalSavingsBalance}
-            />
-          </>
-        )}
-      </div>
+      {/* Bottom nav (mobile) */}
+      <nav className="bottom-nav">
+        <div className="bottom-nav-inner">
+          {NAV.map(({ id, label, Icon }) => (
+            <button
+              key={id}
+              className={`bottom-nav-item${page === id ? ' active' : ''}`}
+              onClick={() => setPage(id)}
+            >
+              <Icon size={20} />
+              {label}
+            </button>
+          ))}
+        </div>
+      </nav>
     </div>
   );
 }
-
-export default App;
